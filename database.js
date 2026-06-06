@@ -15,17 +15,14 @@ db.exec(`
     start_date TEXT,
     address TEXT,
     phone TEXT,
-    notes TEXT,
     completed INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL
   )
 `);
 
-try { db.exec(`ALTER TABLE tasks ADD COLUMN notes TEXT`); } catch {};
-
 const insertStmt = db.prepare(`
-  INSERT INTO tasks (id, text, category, start_date, address, phone, notes, completed, created_at)
-  VALUES (@id, @text, @category, @startDate, @address, @phone, @notes, @completed, @createdAt)
+  INSERT INTO tasks (id, text, category, start_date, address, phone, completed, created_at)
+  VALUES (@id, @text, @category, @startDate, @address, @phone, @completed, @createdAt)
 `);
 
 function getAllTasks() {
@@ -44,7 +41,6 @@ function createTask(task) {
     startDate: task.startDate || null,
     address: task.address || null,
     phone: task.phone || null,
-    notes: task.notes || null,
     completed: task.completed ? 1 : 0,
     createdAt: task.createdAt
   });

@@ -10,9 +10,6 @@
   const taskDateInput = document.getElementById('new-task-date');
   const taskAddressInput = document.getElementById('new-task-address');
   const taskPhoneInput = document.getElementById('new-task-phone');
-  const taskNotesInput = document.getElementById('new-task-notes');
-  const noteToggleBtn = document.getElementById('note-toggle-btn');
-  const notesArea = document.getElementById('notes-area');
   const taskList = document.getElementById('task-list');
   const emptyState = document.getElementById('empty-state');
 
@@ -44,14 +41,6 @@
     filterButtons.forEach(btn => {
       btn.addEventListener('click', () => setFilter(btn.dataset.filter));
     });
-    noteToggleBtn.addEventListener('click', toggleNotesArea);
-  }
-
-  function toggleNotesArea() {
-    const isOpen = notesArea.classList.toggle('open');
-    noteToggleBtn.classList.toggle('active', isOpen);
-    notesArea.setAttribute('aria-hidden', !isOpen);
-    if (isOpen) taskNotesInput.focus();
   }
 
   function setFilter(filter) {
@@ -82,8 +71,7 @@
           text,
           startDate: taskDateInput.value || null,
           address: taskAddressInput.value.trim() || null,
-          phone: taskPhoneInput.value.trim() || null,
-          notes: taskNotesInput.value.trim() || null
+          phone: taskPhoneInput.value.trim() || null
         })
       });
       const task = await res.json();
@@ -92,10 +80,6 @@
       taskDateInput.value = '';
       taskAddressInput.value = '';
       taskPhoneInput.value = '';
-      taskNotesInput.value = '';
-      notesArea.classList.remove('open');
-      noteToggleBtn.classList.remove('active');
-      notesArea.setAttribute('aria-hidden', 'true');
       render();
     } catch (err) {
       console.error('Failed to create task:', err);
@@ -254,13 +238,6 @@
       }
 
       if (detailRow.children.length > 0) contentDiv.appendChild(detailRow);
-
-      if (task.notes) {
-        const notesSpan = document.createElement('div');
-        notesSpan.className = 'task-notes';
-        notesSpan.textContent = task.notes;
-        contentDiv.appendChild(notesSpan);
-      }
 
       const metaRow = document.createElement('div');
       metaRow.className = 'task-meta';
