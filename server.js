@@ -40,7 +40,7 @@ app.get('/api/tasks', (req, res) => {
 });
 
 app.post('/api/tasks', (req, res) => {
-  const { text, startDate, address, phone } = req.body;
+  const { text, startDate, address, phone, notes } = req.body;
   if (!text || !text.trim()) {
     return res.status(400).json({ error: 'Task text is required' });
   }
@@ -51,6 +51,7 @@ app.post('/api/tasks', (req, res) => {
     startDate: startDate || null,
     address: address || null,
     phone: phone || null,
+    notes: notes || null,
     completed: false,
     createdAt: Date.now()
   };
