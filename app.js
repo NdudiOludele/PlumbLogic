@@ -4,6 +4,7 @@
   let tasks = [];
   let taskToDeleteId = null;
   let currentFilter = 'all';
+  let isSubmitting = false;
 
   const taskForm = document.getElementById('new-task-form');
   const taskInput = document.getElementById('new-task-input');
@@ -29,7 +30,10 @@
   }
 
   function setupEventListeners() {
-    taskForm.addEventListener('submit', handleTaskSubmit);
+    document.getElementById('add-task-btn').addEventListener('click', addTask);
+    taskInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addTask();
+    });
     cancelDeleteBtn.addEventListener('click', closeDeleteModal);
     confirmDeleteBtn.addEventListener('click', handleConfirmDelete);
     deleteModal.addEventListener('click', (e) => {
@@ -58,11 +62,12 @@
     render();
   }
 
-  async function handleTaskSubmit(e) {
-    e.preventDefault();
+  async function addTask() {
+    if (isSubmitting) return;
     const text = taskInput.value.trim();
     if (!text) return;
 
+    isSubmitting = true;
     try {
       const res = await fetch('/api/tasks', {
         method: 'POST',
@@ -84,6 +89,7 @@
     } catch (err) {
       console.error('Failed to create task:', err);
     }
+    isSubmitting = false;
   }
 
   async function toggleTask(id) {
