@@ -10,6 +10,9 @@
   // DOM Elements
   const taskForm = document.getElementById('new-task-form');
   const taskInput = document.getElementById('new-task-input');
+  const taskDateInput = document.getElementById('new-task-date');
+  const taskAddressInput = document.getElementById('new-task-address');
+  const taskPhoneInput = document.getElementById('new-task-phone');
   const taskList = document.getElementById('task-list');
   const emptyState = document.getElementById('empty-state');
   
@@ -25,6 +28,30 @@
 
   // Filter Elements
   const filterButtons = document.querySelectorAll('.filter-btn');
+
+  // Category Keyword Mapping
+  const categoryRules = [
+    { keywords: ['boiler', 'heating', 'radiator', 'furnace', 'heat'], category: 'Boiler' },
+    { keywords: ['tap', 'faucet', 'sink', 'basin'], category: 'Faucet' },
+    { keywords: ['pipe', 'copper', 'pvc', 'drain', 'sewer', 'plumbing', 'drainage'], category: 'Pipes' },
+    { keywords: ['toilet', 'commode', 'flush'], category: 'Toilet' },
+    { keywords: ['bath', 'shower', 'bathtub', 'bathroom', 'tile'], category: 'Bathroom' },
+    { keywords: ['water heater', 'water tank', 'waterheater'], category: 'Water Heater' },
+    { keywords: ['leak', 'drip', 'flood', 'flooding', 'water damage', 'moisture'], category: 'Leak' },
+    { keywords: ['disposal', 'garbage', 'garbage disposal', 'waste'], category: 'Disposal' },
+    { keywords: ['gas', 'gas line', 'valve'], category: 'Gas' },
+  ];
+  const defaultCategory = 'General';
+
+  function assignCategory(text) {
+    const lower = text.toLowerCase();
+    for (const rule of categoryRules) {
+      if (rule.keywords.some(kw => lower.includes(kw))) {
+        return rule.category;
+      }
+    }
+    return defaultCategory;
+  }
 
   // Initialize App
   function init() {
@@ -73,15 +100,26 @@
     const text = taskInput.value.trim();
     if (!text) return;
 
+    const startDate = taskDateInput.value || null;
+    const address = taskAddressInput.value.trim() || null;
+    const phone = taskPhoneInput.value.trim() || null;
+
     const newTask = {
       id: 'job-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
       text: text,
+      category: assignCategory(text),
+      startDate: startDate,
+      address: address,
+      phone: phone,
       completed: false,
       createdAt: Date.now()
     };
 
     tasks.push(newTask);
     taskInput.value = '';
+    taskDateInput.value = '';
+    taskAddressInput.value = '';
+    taskPhoneInput.value = '';
     
     // UI Update
     render();
@@ -159,6 +197,13 @@
     if (tasks.length !== originalLength) {
       render();
     }
+  }
+
+  // Formatter for start date display
+  function formatStartDate(dateStr) {
+    if (!dateStr) return null;
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
   // Formatter for localized creation times
@@ -257,12 +302,51 @@
       textSpan.className = 'task-text';
       textSpan.textContent = task.text; // SECURE: Escapes user string safely
 
+      const detailRow = document.createElement('div');
+      detailRow.className = 'task-details';
+
+      if (task.address) {
+        const addressSpan = document.createElement('span');
+        addressSpan.className = 'task-address';
+        addressSpan.textContent = task.address;
+        detailRow.appendChild(addressSpan);
+      }
+
+      if (task.phone) {
+        const phoneSpan = document.createElement('span');
+        phoneSpan.className = 'task-phone';
+        phoneSpan.textContent = task.phone;
+        detailRow.appendChild(phoneSpan);
+      }
+
+      if (detailRow.children.length > 0) {
+        contentDiv.appendChild(detailRow);
+      }
+
+      const metaRow = document.createElement('div');
+      metaRow.className = 'task-meta';
+
+      const categorySpan = document.createElement('span');
+      categorySpan.className = 'task-category';
+      categorySpan.textContent = task.category;
+
+      if (task.startDate) {
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'task-start-date';
+        dateSpan.textContent = formatStartDate(task.startDate);
+
+        metaRow.appendChild(dateSpan);
+      }
+
       const timeSpan = document.createElement('span');
       timeSpan.className = 'task-time';
       timeSpan.textContent = formatTime(task.createdAt); // SECURE: Static display
 
+      metaRow.appendChild(categorySpan);
+      metaRow.appendChild(timeSpan);
+
       contentDiv.appendChild(textSpan);
-      contentDiv.appendChild(timeSpan);
+      contentDiv.appendChild(metaRow);
 
       mainDiv.appendChild(toggleLabel);
       mainDiv.appendChild(contentDiv);
