@@ -32,7 +32,6 @@ function assignCategory(text) {
 }
 
 app.get('/api/tasks', (req, res) => {
-  console.log('GET /api/tasks');
   const tasks = db.getAllTasks();
   res.json(tasks.map(t => ({
     ...t,
@@ -41,7 +40,6 @@ app.get('/api/tasks', (req, res) => {
 });
 
 app.post('/api/tasks', (req, res) => {
-  console.log('POST /api/tasks body:', JSON.stringify(req.body));
   const { text, startDate, address, phone } = req.body;
   if (!text || !text.trim()) {
     return res.status(400).json({ error: 'Task text is required' });

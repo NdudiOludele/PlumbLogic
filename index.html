@@ -78,6 +78,7 @@
                 id="new-task-input" 
                 placeholder="Enter plumbing job (e.g., Replace copper pipes under kitchen sink...)"
                 autocomplete="off"
+                required
                 aria-label="New Job Description"
               >
               <span class="input-focus-line"></span>
@@ -85,7 +86,7 @@
             <div class="date-wrapper">
               <input type="date" id="new-task-date" aria-label="Job Start Date">
             </div>
-            <button type="button" id="add-task-btn" class="btn btn-add" aria-label="Add task to list" onclick="addTaskFromButton()">
+            <button type="submit" id="add-task-btn" class="btn btn-add" aria-label="Add task to list">
               <span class="btn-text">Add Job</span>
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -164,6 +165,6 @@
     </div>
   </div>
 
-  <script src="app.js?t=3"></script>
+  <script src="app.js"></script>
 </body>
 </html>
