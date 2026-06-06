@@ -1,13 +1,10 @@
-// PlumbLogic Task Manager State Management
 (function () {
   'use strict';
 
-  // Application State
   let tasks = [];
   let taskToDeleteId = null;
   let currentFilter = 'all';
 
-  // DOM Elements
   const taskForm = document.getElementById('new-task-form');
   const taskInput = document.getElementById('new-task-input');
   const taskDateInput = document.getElementById('new-task-date');
@@ -15,238 +12,165 @@
   const taskPhoneInput = document.getElementById('new-task-phone');
   const taskList = document.getElementById('task-list');
   const emptyState = document.getElementById('empty-state');
-  
-  // Stats Elements
+
   const totalCountEl = document.getElementById('total-count');
   const completedCountEl = document.getElementById('completed-count');
 
-  // Modal Elements
   const deleteModal = document.getElementById('delete-modal');
   const modalTaskPreview = document.getElementById('modal-task-preview');
   const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
   const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 
-  // Filter Elements
   const filterButtons = document.querySelectorAll('.filter-btn');
 
-  // Category Keyword Mapping
-  const categoryRules = [
-    { keywords: ['boiler', 'heating', 'radiator', 'furnace', 'heat'], category: 'Boiler' },
-    { keywords: ['tap', 'faucet', 'sink', 'basin'], category: 'Faucet' },
-    { keywords: ['pipe', 'copper', 'pvc', 'drain', 'sewer', 'plumbing', 'drainage'], category: 'Pipes' },
-    { keywords: ['toilet', 'commode', 'flush'], category: 'Toilet' },
-    { keywords: ['bath', 'shower', 'bathtub', 'bathroom', 'tile'], category: 'Bathroom' },
-    { keywords: ['water heater', 'water tank', 'waterheater'], category: 'Water Heater' },
-    { keywords: ['leak', 'drip', 'flood', 'flooding', 'water damage', 'moisture'], category: 'Leak' },
-    { keywords: ['disposal', 'garbage', 'garbage disposal', 'waste'], category: 'Disposal' },
-    { keywords: ['gas', 'gas line', 'valve'], category: 'Gas' },
-  ];
-  const defaultCategory = 'General';
-
-  function assignCategory(text) {
-    const lower = text.toLowerCase();
-    for (const rule of categoryRules) {
-      if (rule.keywords.some(kw => lower.includes(kw))) {
-        return rule.category;
-      }
-    }
-    return defaultCategory;
-  }
-
-  // Initialize App
   function init() {
     setupEventListeners();
-    render();
+    loadTasks();
   }
 
-  // Event Listeners Configuration
   function setupEventListeners() {
-    // Form Submission
     taskForm.addEventListener('submit', handleTaskSubmit);
-
-    // Modal Interaction Handlers
     cancelDeleteBtn.addEventListener('click', closeDeleteModal);
     confirmDeleteBtn.addEventListener('click', handleConfirmDelete);
-    
-    // Close modal on click of the background overlay
     deleteModal.addEventListener('click', (e) => {
-      if (e.target === deleteModal) {
-        closeDeleteModal();
-      }
+      if (e.target === deleteModal) closeDeleteModal();
     });
-
-    // Accessibility: Keyboard support for ESC key to close modal
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && deleteModal.classList.contains('active')) {
-        closeDeleteModal();
-      }
+      if (e.key === 'Escape' && deleteModal.classList.contains('active')) closeDeleteModal();
     });
-
-    // Filter Buttons
     filterButtons.forEach(btn => {
       btn.addEventListener('click', () => setFilter(btn.dataset.filter));
     });
   }
 
-  // Set Active Filter
   function setFilter(filter) {
     currentFilter = filter;
     render();
   }
 
-  // Create Task Submission
-  function handleTaskSubmit(e) {
+  async function loadTasks() {
+    try {
+      const res = await fetch('/api/tasks');
+      tasks = await res.json();
+    } catch (err) {
+      console.error('Failed to load tasks:', err);
+    }
+    render();
+  }
+
+  async function handleTaskSubmit(e) {
     e.preventDefault();
     const text = taskInput.value.trim();
     if (!text) return;
 
-    const startDate = taskDateInput.value || null;
-    const address = taskAddressInput.value.trim() || null;
-    const phone = taskPhoneInput.value.trim() || null;
-
-    const newTask = {
-      id: 'job-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
-      text: text,
-      category: assignCategory(text),
-      startDate: startDate,
-      address: address,
-      phone: phone,
-      completed: false,
-      createdAt: Date.now()
-    };
-
-    tasks.push(newTask);
-    taskInput.value = '';
-    taskDateInput.value = '';
-    taskAddressInput.value = '';
-    taskPhoneInput.value = '';
-    
-    // UI Update
-    render();
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          startDate: taskDateInput.value || null,
+          address: taskAddressInput.value.trim() || null,
+          phone: taskPhoneInput.value.trim() || null
+        })
+      });
+      const task = await res.json();
+      tasks.push(task);
+      taskInput.value = '';
+      taskDateInput.value = '';
+      taskAddressInput.value = '';
+      taskPhoneInput.value = '';
+      render();
+    } catch (err) {
+      console.error('Failed to create task:', err);
+    }
   }
 
-  // Toggle Completion State
-  function toggleTask(id) {
-    tasks = tasks.map(task => {
-      if (task.id === id) {
-        return { ...task, completed: !task.completed };
-      }
-      return task;
-    });
-    render();
+  async function toggleTask(id) {
+    try {
+      const res = await fetch(`/api/tasks/${id}/toggle`, { method: 'PATCH' });
+      const updated = await res.json();
+      tasks = tasks.map(t => t.id === id ? updated : t);
+      render();
+    } catch (err) {
+      console.error('Failed to toggle task:', err);
+    }
   }
 
-  // Open Delete Dialog (Modal)
   function openDeleteModal(id) {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-
     taskToDeleteId = id;
-    
-    // Safely set text content for the preview element in modal to avoid XSS
     modalTaskPreview.textContent = task.text;
-    
-    // Open Modal
     deleteModal.classList.add('active');
     deleteModal.setAttribute('aria-hidden', 'false');
-    
-    // Focus confirmation button for keyboard accessibility
     confirmDeleteBtn.focus();
   }
 
-  // Close Delete Dialog (Modal)
   function closeDeleteModal() {
     deleteModal.classList.remove('active');
     deleteModal.setAttribute('aria-hidden', 'true');
     taskToDeleteId = null;
   }
 
-  // Confirm Deletion Flow
-  function handleConfirmDelete() {
+  async function handleConfirmDelete() {
     if (!taskToDeleteId) return;
-
     const id = taskToDeleteId;
     const taskElement = taskList.querySelector(`[data-id="${id}"]`);
 
     if (taskElement) {
-      // Trigger visually polished exiting animation
       taskElement.classList.add('removing');
-      
-      // Delay state removal slightly to let keyframe exit animation complete
-      taskElement.addEventListener('animationend', () => {
-        completeStateRemoval(id);
+      taskElement.addEventListener('animationend', async () => {
+        await removeTask(id);
       }, { once: true });
-      
-      // Safety fallback if animation is blocked/fails
-      setTimeout(() => {
-        completeStateRemoval(id);
+      setTimeout(async () => {
+        await removeTask(id);
       }, 350);
     } else {
-      completeStateRemoval(id);
+      await removeTask(id);
     }
-
     closeDeleteModal();
   }
 
-  // Complete removal from state array
-  function completeStateRemoval(id) {
-    const originalLength = tasks.length;
-    tasks = tasks.filter(t => t.id !== id);
-    
-    // Re-render UI list only if change occurred
-    if (tasks.length !== originalLength) {
+  async function removeTask(id) {
+    try {
+      await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+      tasks = tasks.filter(t => t.id !== id);
       render();
+    } catch (err) {
+      console.error('Failed to delete task:', err);
     }
   }
 
-  // Formatter for start date display
   function formatStartDate(dateStr) {
     if (!dateStr) return null;
     const date = new Date(dateStr + 'T00:00:00');
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  // Formatter for localized creation times
   function formatTime(timestamp) {
     const date = new Date(timestamp);
-    
-    // Custom localized format: e.g. Jun 6, 7:35 AM
-    const options = {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    };
+    const options = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
     return date.toLocaleString('en-US', options);
   }
 
-  // Update Stats & Counters
   function updateCounters() {
-    const totalCount = tasks.length;
-    const completedCount = tasks.filter(t => t.completed).length;
-
-    totalCountEl.textContent = totalCount;
-    completedCountEl.textContent = completedCount;
+    totalCountEl.textContent = tasks.length;
+    completedCountEl.textContent = tasks.filter(t => t.completed).length;
   }
 
-  // Render list to screen (Dynamic safe DOM creation)
   function render() {
-    // Update active filter button
     filterButtons.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.filter === currentFilter);
     });
 
-    // Filter tasks based on current filter
     const filteredTasks = tasks.filter(task => {
       if (currentFilter === 'completed') return task.completed;
-      return true; // 'all' shows everything
+      return true;
     });
 
-    // Clear list securely (never innerHTML = '')
     taskList.replaceChildren();
 
-    // Toggle Empty State view
     if (filteredTasks.length === 0) {
       emptyState.style.display = 'flex';
       taskList.style.display = 'none';
@@ -255,33 +179,23 @@
       taskList.style.display = 'flex';
     }
 
-    // Sort: Active first, then by start date (earliest at top)
     const sortedTasks = [...filteredTasks].sort((a, b) => {
-      if (a.completed !== b.completed) {
-        return a.completed ? 1 : -1;
-      }
-      const dateA = a.startDate || '9999-12-31';
-      const dateB = b.startDate || '9999-12-31';
-      if (dateA !== dateB) {
-        return dateA < dateB ? -1 : 1;
-      }
-      return b.createdAt - a.createdAt;
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      const dateA = a.start_date || '9999-12-31';
+      const dateB = b.start_date || '9999-12-31';
+      if (dateA !== dateB) return dateA < dateB ? -1 : 1;
+      return b.created_at - a.created_at;
     });
 
-    // Build DOM elements dynamically for security
     sortedTasks.forEach(task => {
       const li = document.createElement('li');
       li.className = 'task-item';
-      if (task.completed) {
-        li.classList.add('completed');
-      }
+      if (task.completed) li.classList.add('completed');
       li.setAttribute('data-id', task.id);
 
-      // Main Left Block
       const mainDiv = document.createElement('div');
       mainDiv.className = 'task-main';
 
-      // Custom Toggle Bezel
       const toggleLabel = document.createElement('label');
       toggleLabel.className = 'toggle-wrapper';
       toggleLabel.setAttribute('aria-label', `Mark "${task.text}" as ${task.completed ? 'active' : 'completed'}`);
@@ -299,13 +213,12 @@
       toggleLabel.appendChild(checkbox);
       toggleLabel.appendChild(valveSpan);
 
-      // Text and Time stamp
       const contentDiv = document.createElement('div');
       contentDiv.className = 'task-content';
 
       const textSpan = document.createElement('span');
       textSpan.className = 'task-text';
-      textSpan.textContent = task.text; // SECURE: Escapes user string safely
+      textSpan.textContent = task.text;
 
       const detailRow = document.createElement('div');
       detailRow.className = 'task-details';
@@ -324,9 +237,7 @@
         detailRow.appendChild(phoneSpan);
       }
 
-      if (detailRow.children.length > 0) {
-        contentDiv.appendChild(detailRow);
-      }
+      if (detailRow.children.length > 0) contentDiv.appendChild(detailRow);
 
       const metaRow = document.createElement('div');
       metaRow.className = 'task-meta';
@@ -335,17 +246,16 @@
       categorySpan.className = 'task-category';
       categorySpan.textContent = task.category;
 
-      if (task.startDate) {
+      if (task.start_date) {
         const dateSpan = document.createElement('span');
         dateSpan.className = 'task-start-date';
-        dateSpan.textContent = formatStartDate(task.startDate);
-
+        dateSpan.textContent = formatStartDate(task.start_date);
         metaRow.appendChild(dateSpan);
       }
 
       const timeSpan = document.createElement('span');
       timeSpan.className = 'task-time';
-      timeSpan.textContent = formatTime(task.createdAt); // SECURE: Static display
+      timeSpan.textContent = formatTime(task.created_at);
 
       metaRow.appendChild(categorySpan);
       metaRow.appendChild(timeSpan);
@@ -356,13 +266,11 @@
       mainDiv.appendChild(toggleLabel);
       mainDiv.appendChild(contentDiv);
 
-      // Right Delete button
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'btn-delete';
       deleteBtn.setAttribute('aria-label', `Delete job "${task.text}"`);
       deleteBtn.addEventListener('click', () => openDeleteModal(task.id));
 
-      // Parse trash icon SVG securely using DOMParser to avoid raw innerHTML manipulation
       const svgStr = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6"></polyline>
@@ -371,24 +279,18 @@
           <line x1="14" y1="11" x2="14" y2="17"></line>
         </svg>
       `.trim();
-      
+
       const parser = new DOMParser();
       const svgDoc = parser.parseFromString(svgStr, 'image/svg+xml');
-      const svgElement = svgDoc.documentElement;
-      
-      deleteBtn.appendChild(svgElement);
+      deleteBtn.appendChild(svgDoc.documentElement);
 
-      // Combine components into list item
       li.appendChild(mainDiv);
       li.appendChild(deleteBtn);
-
       taskList.appendChild(li);
     });
 
-    // Refresh Counters
     updateCounters();
   }
 
-  // Boot App
   document.addEventListener('DOMContentLoaded', init);
 })();
