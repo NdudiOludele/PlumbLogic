@@ -255,12 +255,17 @@
       taskList.style.display = 'flex';
     }
 
-    // Sort: Active tasks first, newest tasks first
+    // Sort: Active first, then by start date (earliest at top)
     const sortedTasks = [...filteredTasks].sort((a, b) => {
-      if (a.completed === b.completed) {
-        return b.createdAt - a.createdAt; // Newer tasks higher
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
       }
-      return a.completed ? 1 : -1; // Active tasks first
+      const dateA = a.startDate || '9999-12-31';
+      const dateB = b.startDate || '9999-12-31';
+      if (dateA !== dateB) {
+        return dateA < dateB ? -1 : 1;
+      }
+      return b.createdAt - a.createdAt;
     });
 
     // Build DOM elements dynamically for security
