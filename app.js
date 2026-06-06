@@ -30,7 +30,6 @@
   }
 
   function setupEventListeners() {
-    document.getElementById('add-task-btn').addEventListener('click', addTask);
     taskInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') addTask();
     });
@@ -62,34 +61,58 @@
     render();
   }
 
-  async function addTask() {
+  window.addTaskFromButton = function() {
+    addTask();
+  };
+
+  function addTask() {
     if (isSubmitting) return;
     const text = taskInput.value.trim();
-    if (!text) return;
+    if (!text) {
+      taskInput.focus();
+      taskInput.placeholder = 'Please describe the job...';
+      taskInput.style.outline = '2px solid var(--color-danger)';
+      setTimeout(() => {
+        taskInput.placeholder = 'Enter plumbing job (e.g., Replace copper pipes under kitchen sink...)';
+        taskInput.style.outline = '';
+      }, 2000);
+      return;
+    }
 
     isSubmitting = true;
     try {
-      const res = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          startDate: taskDateInput.value || null,
-          address: taskAddressInput.value.trim() || null,
-          phone: taskPhoneInput.value.trim() || null
-        })
-      });
-      const task = await res.json();
-      tasks.push(task);
-      taskInput.value = '';
-      taskDateInput.value = '';
-      taskAddressInput.value = '';
-      taskPhoneInput.value = '';
-      render();
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/tasks', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          var task = JSON.parse(xhr.responseText);
+          tasks.push(task);
+          taskInput.value = '';
+          taskDateInput.value = '';
+          taskAddressInput.value = '';
+          taskPhoneInput.value = '';
+          render();
+        } else {
+          alert('Failed to add job: ' + xhr.status);
+        }
+        isSubmitting = false;
+      };
+      xhr.onerror = function() {
+        alert('Network error adding job');
+        isSubmitting = false;
+      };
+      xhr.send(JSON.stringify({
+        text: text,
+        startDate: taskDateInput.value || null,
+        address: taskAddressInput.value.trim() || null,
+        phone: taskPhoneInput.value.trim() || null
+      }));
     } catch (err) {
       console.error('Failed to create task:', err);
+      alert('Failed to add job: ' + err.message);
+      isSubmitting = false;
     }
-    isSubmitting = false;
   }
 
   async function toggleTask(id) {
