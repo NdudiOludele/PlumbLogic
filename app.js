@@ -1,7 +1,30 @@
 (function () {
   'use strict';
 
-  const API_BASE = `${window.location.protocol}//${window.location.hostname}:3000`;
+  const STORAGE_KEY = 'plumblogic-tasks';
+
+  const categoryRules = [
+    { keywords: ['boiler', 'heating', 'radiator', 'furnace', 'heat'], category: 'Boiler' },
+    { keywords: ['tap', 'faucet', 'sink', 'basin'], category: 'Faucet' },
+    { keywords: ['pipe', 'copper', 'pvc', 'drain', 'sewer', 'plumbing', 'drainage'], category: 'Pipes' },
+    { keywords: ['toilet', 'commode', 'flush'], category: 'Toilet' },
+    { keywords: ['bath', 'shower', 'bathtub', 'bathroom', 'tile'], category: 'Bathroom' },
+    { keywords: ['water heater', 'water tank', 'waterheater'], category: 'Water Heater' },
+    { keywords: ['leak', 'drip', 'flood', 'flooding', 'water damage', 'moisture'], category: 'Leak' },
+    { keywords: ['disposal', 'garbage', 'garbage disposal', 'waste'], category: 'Disposal' },
+    { keywords: ['gas', 'gas line', 'valve'], category: 'Gas' },
+  ];
+  const defaultCategory = 'General';
+
+  function assignCategory(text) {
+    const lower = text.toLowerCase();
+    for (const rule of categoryRules) {
+      if (rule.keywords.some(kw => lower.includes(kw))) {
+        return rule.category;
+      }
+    }
+    return defaultCategory;
+  }
 
   let tasks = [];
   let taskToDeleteId = null;
@@ -24,6 +47,19 @@
   const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 
   const filterButtons = document.querySelectorAll('.filter-btn');
+
+  function loadTasksFromStorage() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveTasksToStorage() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  }
 
   function init() {
     setupEventListeners();
@@ -50,53 +86,43 @@
     render();
   }
 
-  async function loadTasks() {
-    try {
-      const res = await fetch(`${API_BASE}/api/tasks`);
-      tasks = await res.json();
-    } catch (err) {
-      console.error('Failed to load tasks:', err);
-    }
+  function loadTasks() {
+    tasks = loadTasksFromStorage();
     render();
   }
 
-  async function handleTaskSubmit(e) {
+  function handleTaskSubmit(e) {
     e.preventDefault();
     const text = taskInput.value.trim();
     if (!text) return;
 
-    try {
-      const res = await fetch(`${API_BASE}/api/tasks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          startDate: taskDateInput.value || null,
-          address: taskAddressInput.value.trim() || null,
-          phone: taskPhoneInput.value.trim() || null
-        })
-      });
-      const task = await res.json();
-      tasks.push(task);
-      taskInput.value = '';
-      taskDateInput.value = '';
-      taskAddressInput.value = '';
-      taskPhoneInput.value = '';
-      render();
-    } catch (err) {
-      console.error('Failed to create task:', err);
-    }
+    const task = {
+      id: 'job-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+      text: text,
+      category: assignCategory(text),
+      start_date: taskDateInput.value || null,
+      address: taskAddressInput.value.trim() || null,
+      phone: taskPhoneInput.value.trim() || null,
+      completed: false,
+      created_at: Date.now()
+    };
+
+    tasks.push(task);
+    saveTasksToStorage();
+
+    taskInput.value = '';
+    taskDateInput.value = '';
+    taskAddressInput.value = '';
+    taskPhoneInput.value = '';
+    render();
   }
 
-  async function toggleTask(id) {
-    try {
-      const res = await fetch(`${API_BASE}/api/tasks/${id}/toggle`, { method: 'PATCH' });
-      const updated = await res.json();
-      tasks = tasks.map(t => t.id === id ? updated : t);
-      render();
-    } catch (err) {
-      console.error('Failed to toggle task:', err);
-    }
+  function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    task.completed = !task.completed;
+    saveTasksToStorage();
+    render();
   }
 
   function openDeleteModal(id) {
@@ -115,33 +141,29 @@
     taskToDeleteId = null;
   }
 
-  async function handleConfirmDelete() {
+  function handleConfirmDelete() {
     if (!taskToDeleteId) return;
     const id = taskToDeleteId;
     const taskElement = taskList.querySelector(`[data-id="${id}"]`);
 
     if (taskElement) {
       taskElement.classList.add('removing');
-      taskElement.addEventListener('animationend', async () => {
-        await removeTask(id);
+      taskElement.addEventListener('animationend', () => {
+        removeTask(id);
       }, { once: true });
-      setTimeout(async () => {
-        await removeTask(id);
+      setTimeout(() => {
+        removeTask(id);
       }, 350);
     } else {
-      await removeTask(id);
+      removeTask(id);
     }
     closeDeleteModal();
   }
 
-  async function removeTask(id) {
-    try {
-      await fetch(`${API_BASE}/api/tasks/${id}`, { method: 'DELETE' });
-      tasks = tasks.filter(t => t.id !== id);
-      render();
-    } catch (err) {
-      console.error('Failed to delete task:', err);
-    }
+  function removeTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasksToStorage();
+    render();
   }
 
   function formatStartDate(dateStr) {
