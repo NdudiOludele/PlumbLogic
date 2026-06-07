@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const API_BASE = `http://${window.location.hostname}:3000`;
+  const API_BASE = `${window.location.protocol}//${window.location.hostname}:3000`;
 
   let tasks = [];
   let taskToDeleteId = null;
