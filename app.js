@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  const API_BASE = `http://${window.location.hostname}:3000`;
+
   let tasks = [];
   let taskToDeleteId = null;
   let currentFilter = 'all';
@@ -50,7 +52,7 @@
 
   async function loadTasks() {
     try {
-      const res = await fetch('/api/tasks');
+      const res = await fetch(`${API_BASE}/api/tasks`);
       tasks = await res.json();
     } catch (err) {
       console.error('Failed to load tasks:', err);
@@ -64,7 +66,7 @@
     if (!text) return;
 
     try {
-      const res = await fetch('/api/tasks', {
+      const res = await fetch(`${API_BASE}/api/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -88,7 +90,7 @@
 
   async function toggleTask(id) {
     try {
-      const res = await fetch(`/api/tasks/${id}/toggle`, { method: 'PATCH' });
+      const res = await fetch(`${API_BASE}/api/tasks/${id}/toggle`, { method: 'PATCH' });
       const updated = await res.json();
       tasks = tasks.map(t => t.id === id ? updated : t);
       render();
@@ -134,7 +136,7 @@
 
   async function removeTask(id) {
     try {
-      await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+      await fetch(`${API_BASE}/api/tasks/${id}`, { method: 'DELETE' });
       tasks = tasks.filter(t => t.id !== id);
       render();
     } catch (err) {
